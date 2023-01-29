@@ -104,7 +104,7 @@ const alterPrimaryKeys = ( table_id, pks, callback ) => {
     })
 }
 
-const dataTypeReGen = ( field ) => {
+const dataTypeReGen = ( field, is_primary = false ) => {
     const { field_data_type, default_value, field_props, is_nullable } = field;
     let result = field_data_type;
     const props = field_props ? JSON.parse(field_props) : null;
@@ -119,12 +119,14 @@ const dataTypeReGen = ( field ) => {
         result += " NOT NULL"
     }
 
-    if( default_value ){
-        if( default_value.includes("null")  ){
-            result +=` DEFAULT NULL`
-        }
-        else{
-            result += ` DEFAULT '${ default_value }'`
+    if( !is_primary ){
+        if( default_value ){
+            if( default_value.includes("null")  ){
+                result +=` DEFAULT NULL`
+            }
+            else{
+                result += ` DEFAULT '${ default_value }'`
+            }
         }
     }
     return result;
@@ -335,7 +337,7 @@ router.post('/alter/table/drop/column', (req, res) => {
     })
 })
 
-router.post('/alter/table/modify/column', (req, res) => {
+router.post('/alter/table/modify/column', (req, res) => { /* Check foreign key constraint and alert the user */
     const { data, type } = req.body;
     const criteria = { field: "field_id", value: data.field_id };
     const values = [
@@ -396,7 +398,6 @@ router.post('/alter/table/modify/column', (req, res) => {
                 })
 
             }else{
-                console.log( "primary altering" )
                 const keysConnector = new Table('_keys');
                 connector(`
                     SELECT * FROM _keys WHERE field_id = ${ data.field_id } AND key_type = 'primary'`
@@ -426,10 +427,10 @@ router.post('/alter/table/modify/column', (req, res) => {
                                         fc.selectOne("field_id", data.field_id, (result) => {
                                             const _field = result[0];
                                             connector(`
-                                                ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                                ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field, true ) }
                                             `, result => {
                                                 console.log(`
-                                                    ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                                    ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field, true ) }
                                                 `)
                                                 res.send({ success: true, field: { ...newField, is_primary: true } })
                                             })
