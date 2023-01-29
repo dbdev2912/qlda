@@ -45,14 +45,15 @@ router.post('/tables', (req, res) => {
     ]
     tablesConnector.insertOne( values , result => {
         const table_id = result.insertId;
+        const newFieldName = id()
         connector(`
-            CREATE TABLE ${table_name}( id INT PRIMARY KEY NOT NULL );
+            CREATE TABLE ${table_name}( ${ newFieldName } INT PRIMARY KEY NOT NULL );
         `, rlt => {
             const fields = new Table('fields');
             fields.insertOne([
                 { field: "table_id", value: table_id },
                 { field: "field_alias", value: "ID" },
-                { field: "field_name", value: id() },
+                { field: "field_name", value: newFieldName },
                 { field: "nullable", value: "1" },
                 { field: "field_props", value: JSON.stringify({ "DEFAULT_PROPS": "DUOC CHUA ?"}) },
                 { field: "field_data_type", value: "Int" },
@@ -75,12 +76,62 @@ router.post('/tables', (req, res) => {
     })
 })
 
-const alterPrimaryKeys = ( pks ) => {
+const alterPrimaryKeys = ( table_id, pks, callback ) => {
+    connector(`
+        SELECT * FROM fields AS F INNER JOIN _keys AS K ON F.field_id = K.field_id
+        WHERE table_id = ${table_id} AND key_type="primary"
+    `,(result) => {
+        const fields = result.map( field => field.field_name );
+        const fields_string = fields.join(',');
+        const inquery_string = `(${fields_string})`;
 
+        const tables = new Table("tables");
+        tables.selectOne("table_id", table_id, (result) => {
+            const table = result[0];
+
+            let query = `
+                ALTER TABLE ${ table.table_name } DROP PRIMARY KEY
+            `
+            connector( query, (result) => {
+                query = `
+                    ALTER TABLE ${ table.table_name } ADD CONSTRAINT PRIMARY KEY${ inquery_string }
+                `;
+                connector( query, result => {
+                    callback(result);
+                })
+            })
+        })
+    })
 }
 
-router.post('/alter/table', ( req, res ) => {
-    const { table_id, field } = req.body;
+const dataTypeReGen = ( field ) => {
+    const { field_data_type, default_value, field_props, is_nullable } = field;
+    let result = field_data_type;
+    const props = field_props ? JSON.parse(field_props) : null;
+    if( field_data_type.toLowerCase().includes("char") ){
+        result += `(${ props.length })`;
+    }
+    if( field_data_type.toLowerCase().includes("dec") ){
+        result += `(${ props.length }, ${ props.pointAt })`;
+    }
+
+    if( is_nullable === true ){
+        result += " NOT NULL"
+    }
+
+    if( default_value ){
+        if( default_value.includes("null")  ){
+            result +=` DEFAULT NULL`
+        }
+        else{
+            result += ` DEFAULT '${ default_value }'`
+        }
+    }
+    return result;
+}
+
+router.post('/alter/table', ( req, res ) => { /* Add column nhe quí dị */
+    const { table_id, field, table_name } = req.body;
     const tablesConnector = new Table('fields');
     const field_name = id();
     const values = [
@@ -90,52 +141,70 @@ router.post('/alter/table', ( req, res ) => {
         { field: "nullable", value: field.is_nullable === true ? "1" : "0" },
         { field: "field_data_type", value: field.data_type },
         { field: "default_value", value: field.default_value },
-        { field: "field_props", value: field.props ? JSON.stringify(field.props) : null }
+        { field: "field_props", value: field.props ? JSON.stringify(field.props) : JSON.stringify({"null" : "được chưa"}) }
     ]
+
     if( field.is_primary ){
-        /*
-            new primary column
-            select all old primary keys and recombine to new collection of keys
-            then alter table
-        */
+
         tablesConnector.insertOne(values, (result) => {
-            const field_id = result.insertId;
-            const keys = new Table('_keys');
-            keys.insertOne( [
-                { field: "field_id", value: field_id },
-                { field: "key_type", value: "primary" },
-            ], (result) => {
 
-                connector(`
+            tablesConnector.selectOne("field_id", result.insertId, (result) => {
+                const _field = result[0]
+                const query = `
+                    ALTER TABLE ${table_name} ADD COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                `;
+                connector(query, (result) => {
 
-                    SELECT * FROM _keys
-                    WHERE key_type = 'primary' and field_id IN (
-                        SELECT field_id FROM fields WHERE table_id = ${table_id}
-                    );
+                    const field_id = _field.field_id;
+                    const keys = new Table('_keys');
+                    keys.insertOne( [
+                        { field: "field_id", value: field_id },
+                        { field: "key_type", value: "primary" },
+                    ], (result) => {
 
-                `, result => {
-                    const pks = result;
-                    if( result.length > 0 ){
-                        alterPrimaryKeys( pks );
-                    }
-                    tablesConnector.selectOne( "field_id", field_id, (result) => {
-                        const f = result[0]
-                        res.send({ field: {...f, is_primary: true} })
+                        connector(`
+
+                            SELECT * FROM _keys
+                            WHERE key_type = 'primary' and field_id IN (
+                                SELECT field_id FROM fields WHERE table_id = ${table_id}
+                            );
+
+                            `, result => {
+                                const pks = result;
+                                if( pks.length > 0 ){
+                                    alterPrimaryKeys( table_id, pks, (result => {
+                                        tablesConnector.selectOne( "field_id", field_id, (result) => {
+                                            const f = result[0]
+                                            res.send({ field: {...f, is_primary: true} })
+                                        })
+                                    }) );
+                                }else{
+                                    tablesConnector.selectOne( "field_id", field_id, (result) => {
+                                        const f = result[0]
+                                        res.send({ field: {...f, is_primary: true} })
+                                    })
+                                }
+                            })
+
+                        })
                     })
                 })
-
             })
-        })
-    }else{
-
-        tablesConnector.insertOne(values, (result) => {
-            const field_id = result.insertId;
-            tablesConnector.selectOne( "field_id", field_id, (result) => {
-                const f = result[0]
-                res.send({ field: f })
+        }else{
+            tablesConnector.insertOne(values, (result) => {
+                const field_id = result.insertId;
+                tablesConnector.selectOne( "field_id", field_id, (result) => {
+                    const f = result[0]
+                    const query = `
+                        ALTER TABLE ${table_name} ADD COLUMN ${ f.field_name } ${ dataTypeReGen( f ) }
+                    `;
+                    console.log(query)
+                    connector(query, (result) => {
+                        res.send({ field: f })
+                    })
+                })
             })
-        })
-    }
+        }
 
 })
 
@@ -168,6 +237,7 @@ router.get('/table/foreigns/:table_id', (req, res) => {
                     const fields = result.map( field => {
                         foreignKey = foreignKeys.filter( fk => fk.field_id === field.reference_on )[0];
                         return {
+                            key_id: field.key_id,
                             field: {
                                 field_id: field.field_id,
                                 field_name: field.field_name,
@@ -196,30 +266,77 @@ router.get('/table/foreigns/:table_id', (req, res) => {
 router.post('/table/key/foreign', ( req, res ) => {
     const { key } = req.body;
     const keysConnector = new Table('_keys');
-    const values = [
-        { field: "field_id", value: key.field.field_id },
-        { field: "key_type", value: "foreign" },
-        { field: "reference_on", value: key.on.field_id }
-    ]
-    keysConnector.insertOne( values, ( insertResult ) => {
-        res.send({ insertResult })
+
+    connector(`
+        SELECT * FROM _keys WHERE field_id = ${ key.field.field_id } AND reference_on = ${ key.on.field_id }
+    `, (result) => {
+
+        if( result.length === 0 ){
+            const values = [
+                { field: "field_id", value: key.field.field_id },
+                { field: "key_type", value: "foreign" },
+                { field: "reference_on", value: key.on.field_id }
+            ]
+            keysConnector.insertOne( values, ( insertResult ) => {
+
+                connector(`
+                    SELECT table_name FROM tables AS T INNER JOIN fields AS F
+                        ON T.table_id = F.table_id
+                    WHERE field_id = ${ key.field.field_id }
+                `, (result) => {
+                    const table = result[0];
+                    const alterQuery = `
+                            ALTER TABLE ${ table.table_name } ADD CONSTRAINT fk_${key.field.field_id}_${key.on.field_id}
+                            FOREIGN KEY ( ${key.field.field_name} )
+                            REFERENCES ${ key.reference.table_name }( ${key.on.field_name} )
+                            ON UPDATE CASCADE
+                            ON DELETE CASCADE;
+                    `
+                    // console.log(alterQuery)
+                    connector(alterQuery, (result) => {
+                        res.send({ insertResult })
+                    })
+                })
+            })
+        }else{
+            res.send({ success: false })
+        }
     })
+
 })
 
 router.post('/alter/table/drop/column', (req, res) => {
     const { field_id } = req.body;
     const fieldsConnector = new Table('fields');
     const keysConnector = new Table('_keys');
-    fieldsConnector.deleteOne( "field_id", field_id, (result) => {
-        keysConnector.deleteOne("field_id", field_id, (result) => {
-            res.send({ success: true })
+    fieldsConnector.selectOne("field_id", field_id, result => {
+        const field = result[0];
+        connector(`
+            SELECT table_name FROM tables AS T INNER JOIN fields AS F
+            ON T.table_id = F.table_id
+            WHERE field_id = ${ field_id }
+        `, (result) => {
+            const table = result[0];
+
+            /* foreign key drop will be deplay soon */
+
+            fieldsConnector.deleteOne( "field_id", field_id, (result) => {
+                keysConnector.deleteOne("field_id", field_id, (result) => {
+                    const query = `
+                        ALTER TABLE ${ table.table_name } DROP COLUMN ${ field.field_name }
+                    `;
+                    connector( query, (result) => {
+                        console.log(query);
+                        res.send({ success: true })
+                    })
+                })
+            })
         })
     })
 })
 
 router.post('/alter/table/modify/column', (req, res) => {
     const { data, type } = req.body;
-    console.log(`IS PRIMARY: ${data.is_primary}`)
     const criteria = { field: "field_id", value: data.field_id };
     const values = [
         { field: "field_name", value: data.field_name },
@@ -227,7 +344,7 @@ router.post('/alter/table/modify/column', (req, res) => {
         { field: "nullable", value: data.is_nullable == true ? "1" : "0" },
         { field: "field_data_type", value: type.name },
         { field: "default_value", value: data.default },
-        { field: "field_props", value: data.props ? JSON.stringify(data.props) : null }
+        { field: "field_props", value: data.props ? JSON.stringify(data.props) : JSON.stringify({"null" : "được chưa"}) }
     ]
 
     const fieldsConnector = new Table('fields');
@@ -237,25 +354,133 @@ router.post('/alter/table/modify/column', (req, res) => {
             if( !data.is_primary ){
 
                 connector(`
-                    DELETE FROM _keys WHERE field_id = ${ data.field_id } AND key_type='primary';
-                    `, (result) => {
-                            res.send({ success: true, field: { ...newField, is_primary: false } })
+                    SELECT table_name, t.table_id
+                    FROM tables AS T INNER JOIN fields AS F
+                    ON T.table_id = F.table_id
+                    WHERE field_id = ${ data.field_id }
+                `, result => {
+                    const { table_name, table_id } = result[0];
+
+                    connector(`
+                        ALTER TABLE ${ table_name } DROP PRIMARY KEY;
+                    `, result => {
+
+                        connector(`
+                            DELETE FROM _keys WHERE field_id = ${ data.field_id } AND key_type='primary';
+                            `, (result) => {
+
+                                connector(`
+                                    SELECT * FROM _keys
+                                    WHERE key_type = 'primary' and field_id IN (
+                                        SELECT field_id FROM fields WHERE table_id = ${table_id}
+                                    );
+                                `, (keys) => {
+                                    alterPrimaryKeys(table_id, keys, (result) => {
+
+                                        const fc = new Table("fields");
+                                        fc.selectOne("field_id", data.field_id, (result) => {
+                                            const _field = result[0];
+                                            connector(`
+                                                ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                            `, result => {
+                                                console.log(`
+                                                    ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                                `)
+                                                res.send({ success: true, field: { ...newField, is_primary: false } })
+                                            })
+                                        })
+                                    })
+                                })
+                            })
                     })
+                })
 
             }else{
-
+                console.log( "primary altering" )
                 const keysConnector = new Table('_keys');
                 connector(`
                     SELECT * FROM _keys WHERE field_id = ${ data.field_id } AND key_type = 'primary'`
                 , (result) => {
                     if( result.length > 0 ){
-                        res.send({ success: true, field: { ...newField, is_primary: true } })
+                        connector(`
+                            SELECT table_name, t.table_id
+                            FROM tables AS T INNER JOIN fields AS F
+                            ON T.table_id = F.table_id
+                            WHERE field_id = ${ data.field_id }
+                        `, result => {
+                            const { table_name, table_id } = result[0];
+
+                            connector(`
+                                ALTER TABLE ${ table_name } DROP PRIMARY KEY;
+                            `, result => {
+
+                                connector(`
+                                    SELECT * FROM _keys
+                                    WHERE key_type = 'primary' and field_id IN (
+                                        SELECT field_id FROM fields WHERE table_id = ${table_id}
+                                    );
+                                `, (keys) => {
+
+                                    alterPrimaryKeys(table_id, keys, (result) => {
+                                        const fc = new Table("fields");
+                                        fc.selectOne("field_id", data.field_id, (result) => {
+                                            const _field = result[0];
+                                            connector(`
+                                                ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                            `, result => {
+                                                console.log(`
+                                                    ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                                `)
+                                                res.send({ success: true, field: { ...newField, is_primary: true } })
+                                            })
+                                        })
+
+                                    })
+                                })
+                            })
+                        })
                     }else{
+
                         connector(`
                             INSERT INTO _keys(field_id, key_type) VALUES(${ data.field_id }, 'primary')`
                         , (result) => {
+                            connector(`
+                                SELECT table_name, t.table_id
+                                FROM tables AS T INNER JOIN fields AS F
+                                ON T.table_id = F.table_id
+                                WHERE field_id = ${ data.field_id }
+                            `, result => {
+                                const { table_name, table_id } = result[0];
 
-                            res.send({ success: true, field: { ...newField, is_primary: true } })
+                                connector(`
+                                    ALTER TABLE ${ table_name } DROP PRIMARY KEY;
+                                `, result => {
+
+                                    connector(`
+                                        SELECT * FROM _keys
+                                        WHERE key_type = 'primary' and field_id IN (
+                                            SELECT field_id FROM fields WHERE table_id = ${table_id}
+                                        );
+                                    `, (keys) => {
+
+                                        alterPrimaryKeys(table_id, keys, (result) => {
+                                            const fc = new Table("fields");
+                                            fc.selectOne("field_id", data.field_id, (result) => {
+                                                const _field = result[0];
+                                                connector(`
+                                                    ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                                `, result => {
+                                                    console.log(`
+                                                        ALTER TABLE ${table_name} MODIFY COLUMN ${ _field.field_name } ${ dataTypeReGen( _field ) }
+                                                    `)
+                                                    res.send({ success: true, field: { ...newField, is_primary: true } })
+                                                })
+                                            })
+
+                                        })
+                                    })
+                                })
+                            })
                         })
                     }
                 })
@@ -281,15 +506,82 @@ router.post('/modify/table', (req, res) => {
 router.post('/drop/table', (req, res) => {
     const { table_id } = req.body;
     const tables = new Table('tables');
-    tables.deleteOne('table_id', table_id, (result) => {
+    tables.selectOne("table_id", table_id, ( result ) => {
+        const { table_name } = result[0];
+
         connector(`
-            DELETE FROM _keys WHERE
-            field_id IN
-                ( SELECT field_id FROM fields WHERE table_id = ${table_id} )
-            OR reference_on IN
-                ( SELECT field_id FROM fields WHERE table_id = ${table_id} )
-        `, (result) => {
-            res.send({ success: true })
+            DROP TABLE ${ table_name };
+        `, result => {
+            /*
+                !important
+                Remove foreign key before dropping table
+            */
+            tables.deleteOne('table_id', table_id, (result) => {
+                connector(`
+                    DELETE FROM _keys WHERE
+                    field_id IN
+                    ( SELECT field_id FROM fields WHERE table_id = ${table_id} )
+                    OR reference_on IN
+                    ( SELECT field_id FROM fields WHERE table_id = ${table_id} )
+                    `, (result) => {
+                        res.send({ success: true })
+                    })
+                })
+        })
+    })
+})
+
+router.post('/modify/foreign/key', (req, res) => {
+    const { key } = req.body;
+    // console.log(key)
+    const _keys = new Table('_keys');
+    _keys.selectOne( "key_id", key.key_id, (result) => {
+        const oldKey = result[0];
+        _keys.updateOne({ field: "key_id", value: key.key_id }, [
+            { field: "field_id", value: key.field.field_id },
+            { field: "reference_on", value: key.on.field_id }
+        ], (result) => {
+
+            const fields = new Table("fields");
+            connector(`
+                SELECT *
+                FROM tables AS T INNER JOIN fields AS F
+                ON T.table_id = F.table_id
+                WHERE field_id = ${ oldKey.field_id }
+                `
+            , ( result ) => {
+                const oldKeyField = result[0];
+
+                connector(`
+                    SELECT *
+                    FROM tables AS T INNER JOIN fields AS F
+                    ON T.table_id = F.table_id
+                    WHERE field_id = ${ oldKey.reference_on }
+                `, (result) => {
+                    const oldKeyReference = result[0];
+
+                    const query = `
+                        ALTER TABLE ${oldKeyField.table_name} DROP CONSTRAINT fk_${oldKeyField.field_id}_${ oldKeyReference.field_id };
+                    `;
+                    connector( query, (result) => {
+
+                        connector( `
+                        SELECT *
+                        FROM tables AS T INNER JOIN fields AS F
+                        ON T.table_id = F.table_id
+                        WHERE field_id = ${ key.field.field_id }`, (result) => {
+                            const newKeyField = result[0];
+                            connector(`
+                                ALTER TABLE ${newKeyField.table_name} ADD CONSTRAINT fk_${newKeyField.field_id}_${ key.on.field_id }
+                                FOREIGN KEY ( ${ key.field.field_name } ) REFERENCES ${ key.reference.table_name }(${ key.on.field_name })
+                                ON UPDATE CASCADE ON DELETE CASCADE;
+                            `, result => {
+                                res.send({ success: true })
+                            })
+                        })
+                    })
+                });
+            })
         })
     })
 })

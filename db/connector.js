@@ -10,15 +10,19 @@ var conn = mysql.createConnection({
 module.exports = {
     connector: (query, callback) => {
         conn.connect( () => {
-            try{
+            // try{
+            //     conn.query(query, (err, result, fields) => {
+            //         callback(result)
+            //     })
+            // }
+            // catch (err){
+            //     console.log(err)
+            //     callback([]);
+            // }
+            // console.log( " \n"+query );
                 conn.query(query, (err, result, fields) => {
                     callback(result)
                 })
-            }
-            catch (err){
-                console.log(err)
-                callback([]);
-            }
         })
     }
 }
