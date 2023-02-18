@@ -4,7 +4,7 @@ var conn = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "root",
-    database: "mlcms"
+    database: "qlda"
 });
 
 module.exports = {
@@ -20,9 +20,9 @@ module.exports = {
             //     callback([]);
             // }
             // console.log( " \n"+query );
-                conn.query(query, (err, result, fields) => {
-                    callback(result)
-                })
+            conn.query(query, (err, result, fields) => {
+                callback(result)
+            })
         })
     }
 }
