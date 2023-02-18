@@ -1,0 +1,25 @@
+.block{
+    display: block;
+}
+
+.hidden{
+    display: none;
+}
+
+.container{
+    display: block;
+    width: 80%;
+    max-width: $pc-vp;
+    margin: auto;
+}
+
+
+.container-fluid{
+    display: block;
+    width: 100%;
+}
+
+.fullscreen{
+    width: 100vw;
+    height: 100vh;
+}

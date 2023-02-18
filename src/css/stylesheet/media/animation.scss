@@ -1,0 +1,131 @@
+.hover{
+    transition: 0.25s ease;
+    &:hover{
+        background: $color-3;
+    }
+}
+
+.pointer{
+    cursor: pointer;
+}
+
+.no-overflow{
+    overflow: hidden;
+    transition: ease 0.25s;
+}
+
+.overflow{
+    overflow: auto;
+}
+
+.fade-in-ease{
+    animation-name: fadeInEase;
+    animation-duration: 1s;
+    opacity: 1;
+}
+
+@keyframes fadeInEase {
+    from {
+        opacity: 0;
+    }
+    to{
+        opacity: 1;
+    }
+}
+
+.drop-input{
+    overflow: hidden;
+    height: 0px;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: ease 0.25s;
+    background: white;
+
+    .drop-container{
+        height: 200px;
+        overflow-y: scroll;
+    };
+}
+
+$hidenDist: -242px;
+
+.navbar{
+    transition: ease-in-out 0.5s;
+}
+
+.app{
+    transition: ease-in-out 0.5s;
+}
+
+.app-stretch{
+    width: calc( 100vw - 52px );
+    top: 0;
+    left: 52px !important;
+}
+
+.app-scaled{
+    width: calc( 100vw - 300px );
+    left: 300px !important;
+}
+
+.nav-show{
+    animation-name: navShow;
+    animation-duration: 0.5s;
+    left: 0;
+
+    .order-0{
+        order: 0;
+    }
+
+    .order-1{
+        order: 1;
+    }
+}
+
+.nav-hide{
+    animation-name: navShow;
+    animation-duration: 0.5s;
+    left: $hidenDist;
+
+    .order-0{
+        order: 1;
+    }
+
+    .order-1{
+        order: 0;
+    }
+}
+
+
+@keyframes navShow {
+    0%{
+        left: $hidenDist;
+    }
+    100%{
+        left: 0px;
+    }
+}
+
+@keyframes navHide {
+    0%{
+        left: 0px;
+    }
+
+    100%{
+        left: $hidenDist;
+    }
+}
+
+
+.dock{
+    display: block;
+    position: absolute;
+    top: 5px;
+    right: 35px;
+    width: 15px;
+    height: 15px;
+    background: black;
+    transform: rotate(45deg);
+}

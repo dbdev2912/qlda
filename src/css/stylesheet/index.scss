@@ -1,0 +1,22 @@
+$mylan-color: #005496;
+$theme-color: $mylan-color;  // mylan logo blue
+
+$pc-vp:           1280px;
+$pad-vp:          992px;
+$mobile-vp:       768px;
+$small-mobile-vp: 448px;
+
+$color-0: #b4dc83;  // light blue
+$color-1: #5a5a5a;  // deep gray
+$color-2: #989898;  // gray
+$color-3: #cccccc;  // light gray
+$color-4: #ff6655;  // light crimson
+
+*{
+    outline: none !important;
+}
+
+
+.app{
+    width: calc( 100vw - 300px );
+}

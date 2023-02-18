@@ -1,0 +1,32 @@
+.italic{
+    font-style: italic;
+}
+
+.bold{
+    font-weight: bold;
+}
+
+.underline-fit{
+    display: block;
+    width: max-content;
+    &::after{
+        display: block;
+        content: "";
+        width: 100%;
+        border-top: 1px solid #000;
+    }
+}
+
+.no-underline{
+    text-decoration: none;
+}
+
+.underline{
+    display: block;
+    &::after{
+        display: block;
+        content: "";
+        width: 100%;
+        border-top: 1px solid #000;
+    }
+}
