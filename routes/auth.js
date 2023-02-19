@@ -65,7 +65,7 @@ router.post(`/signup`, (req, res) => {
 
 router.get('/signout', ( req, res ) => {
     delete req.session.auth;
-    
     res.send({ success: true });
 })
+
 module.exports = { router }
