@@ -13,6 +13,30 @@ import { Login, SignUp, SignOut } from './auth';
 import { Home, Projects } from './client';
 
 function App() {
+    const dispatch = useDispatch()
+
+    useEffect(() => {
+        const specialURLs = [ "/login", "/signup", "/signout" ]
+        const url = window.location.pathname;
+
+        if( specialURLs.indexOf(url) === -1 ){
+            fetch("/api/auth/session").then( res => res.json() ).then( data => {
+                const { session } = data;
+
+                if( session ){
+                    dispatch({
+                        type: "sessionInitialize",
+                        payload: { auth: session },
+                    })
+                }else{
+                    window.location = "/login"
+                }
+            })
+        }
+    }, [])
+
+
+
   return (
       <React.StrictMode>
         <Router>

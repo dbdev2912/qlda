@@ -9,7 +9,7 @@ export default () => {
         }
     }
 
-    const submit = () => {        
+    const submit = () => {
         fetch("/api/auth/login", {
             method: "post",
             headers: {
@@ -32,10 +32,10 @@ export default () => {
                     <span className="block text-center upper text-20-px">Đăng nhập</span>
                     <div className="flex flex-wrap">
                         <div className="w-90-pct mg-auto m-t-5 flex flex-no-wrap flex-middle">
-                            <input placeHolder="Tài khoản" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, username: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
+                            <input placeholder="Tài khoản" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, username: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
                         </div>
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap flex-middle">
-                            <input  placeHolder="Mật khẩu" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, password: e.target.value} ) } } type="password" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
+                            <input  placeholder="Mật khẩu" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, password: e.target.value} ) } } type="password" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
                         </div>
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap">
                             <button className="sign-btn w-100-pct pointer" onClick={ submit }>Tiếp tục ➤</button>

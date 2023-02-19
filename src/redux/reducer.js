@@ -1,10 +1,15 @@
 const initState = {
     highlight: 0,
     navState: true,
+    auth: {}
 }
 
 export default ( state = initState, action ) => {
     switch (action.type) {
+
+        case "sessionInitialize":
+            return sessionInitialize(state, action);
+        break;
 
         case "setNavBarHighLight":
             return setNavBarHighLight(state, action)
@@ -18,6 +23,11 @@ export default ( state = initState, action ) => {
         default:
             return state;
     }
+}
+
+const sessionInitialize = ( state, action ) => {
+    const { auth } = action.payload;
+    return { ...state, auth }
 }
 
 

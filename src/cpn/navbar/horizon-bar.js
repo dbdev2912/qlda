@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 
 const urls = [
     { id: 0, url: "/update/avatar", label: "Thay đổi ảnh đại diện", icon: "user.png",},
@@ -9,14 +10,16 @@ const urls = [
 export default () => {
 
     const [ height, setHeight ] = useState(false);
+    const { auth } = useSelector( state => state );
 
     return(
-        <div className="sticky-default z-index-1 w-100-pct shadow horizon-bar p-0-5">
-            <div className="avatar-container flex flex-middle ml-auto m-r-1 pointer" onClick={ () => { setHeight( !height ) } }>
-                <img src="/assets/image/icon.png" className="w-50-px border-radius-24-px"/>
+        <div className="sticky-default flex flex-no-wrap flex-end z-index-1 w-100-pct shadow horizon-bar p-0-5">
+            <span className="text-18-px block p-0-5">{ auth.fullname }</span>
+            <div className="avatar-container flex flex-middle m-r-1 pointer" onClick={ () => { setHeight( !height ) } }>
+                <img src={ auth.img_url } className="w-50-px border-radius-24-px"/>
             </div>
             <div className="rel">
-                <div className=" abs t-0 r-0 drop-container no-overflow" style={{ width: "max-content", height: `${ height ? 210: 0 }px`, transition: "ease-in-out 0.25s" }}>
+                <div className=" abs r-0 drop-container no-overflow" style={{ width: "max-content", height: `${ height ? 210: 0 }px`, transition: "ease-in-out 0.25s", top: "100%" }}>
                     <span className="dock z-index-1"/>
                     <div className="bg-white rel border-1 z-index-2" style={{ marginTop: "10px" }}>
                     {

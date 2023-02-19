@@ -44,19 +44,19 @@ export default () => {
                     <span className="block text-center text-20-px upper">Đăng ký</span>
                     <div className="flex flex-wrap">
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap flex-middle">
-                            <input placeHolder="Tài khoản*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, account_string: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
+                            <input placeholder="Tài khoản*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, account_string: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
                         </div>
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap flex-middle">
-                            <input placeHolder="Mật khẩu*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, pwd_string: e.target.value} ) } } type="password" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
+                            <input placeholder="Mật khẩu*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, pwd_string: e.target.value} ) } } type="password" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
                         </div>
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap flex-middle">
-                            <input placeHolder="Nhập lại mật khẩu*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, reenter: e.target.value} ) } } type="password" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
+                            <input placeholder="Nhập lại mật khẩu*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, reenter: e.target.value} ) } } type="password" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
                         </div>
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap flex-middle">
-                            <input placeHolder="Tên của bạn" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, fullname: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
+                            <input placeholder="Tên của bạn" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, fullname: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
                         </div>
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap flex-middle">
-                            <input placeHolder="Email*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, email: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
+                            <input placeholder="Email*" onKeyUp={ enterTriggered } onChange={ (e) => { setAuth( {...auth, email: e.target.value} ) } } type="text" className="block w-100-pct ml-auto border-radius-12-px border-1 p-0-5"/>
                         </div>
                         <div className="w-90-pct mg-auto m-t-1 flex flex-no-wrap">
                             <button className="sign-btn w-100-pct pointer" onClick={ submit }>Continue ➤</button>
